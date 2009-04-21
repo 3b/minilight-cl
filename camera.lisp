@@ -23,14 +23,16 @@
 	   (up (vec3 0.0 1.0 0.0)))
       (when (vector-zerop vdir)
 	(setf vdir (vec3-0)))
-      (setf vang (* (min 160.0 (max 10.0 vang))
-		    (/ pi 180.0)))
+      (setf vang (float (* (min 160.0 (max 10.0 vang))
+                           (/ pi 180.0)) 1.0))
       (let ((right (nnormalize (cross up vdir))))
+        (format t "up=~s vdir=~s r=~s~%" up vdir right)
 	(if (vector-zerop right)
-	    (setf up (nnormalize (cross vdir right)))
 	    (progn
 	      (setf up (vec3 0.0 0.0 (1/-1 (aref vdir 1))))
-	      (setf right (nnormalize (cross up vdir)))))
+              (format t "up=~s vdir=~s r=~s~%" up vdir (nnormalize (cross up vdir)))
+	      (setf right (nnormalize (cross up vdir))))	    (setf up (nnormalize (cross vdir right)))
+)
 	(make-instance 'camera
 		       :view-position vpos :view-angle vang
 		       :view-direction vdir :right right
@@ -43,6 +45,7 @@
 	       (view-ang view-angle)
 	       (view-pos view-position)
 	       up right) camera
+    (format t "~s ~s ~s ~s ~s" (type-of view-dir)  (type-of view-ang)  (type-of view-pos)  (type-of up)  (type-of right))
     (with-slots (width height) image
       ;; make raytracer
       (let ((raytracer (make-raytracer scene))

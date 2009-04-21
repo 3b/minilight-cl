@@ -61,7 +61,7 @@ with a newline. Eg.:
 
 (defun read-vector (stream)
   (let ((in (read stream nil 'eof)))
-    (when (not (eql in 'eof)) (coerce in 'vector))))
+    (when (not (eql in 'eof)) (coerce (mapcar 'float in) 'vector3d))))
 
 (defun valid-minilight-file-p (stream)
   (let ((line  (string-trim '(#\Space #\Return #\Tab #\Newline)
@@ -106,3 +106,4 @@ with a newline. Eg.:
 			     (save-image out-image image t frame-num)))
 		     :do (format t "iteration: ~a" frame-num)
 		     :finally (format t "~%finished~&"))))))))))
+

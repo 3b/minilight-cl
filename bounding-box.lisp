@@ -50,9 +50,9 @@
 
 (defmethod center ((box aa-bbox))
   (with-slots (lx ly lz hx hy hz) box
-    (let ((mid-x (- hx lx))
-	  (mid-y (- hy ly))
-	  (mid-z (- hz lz)))
+    (let ((mid-x (+ hx lx))
+	  (mid-y (+ hy ly))
+	  (mid-z (+ hz lz)))
       (values (* mid-x 0.5) (* mid-y 0.5) (* mid-z 0.5)))))
 
 (defmethod subdivide ((box aa-bbox))
