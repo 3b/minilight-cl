@@ -2,7 +2,7 @@
 
 (in-package #:minilight)
 
-(defvar +ppm-id+ "P6")
+(defvar +ppm-id+ "P3")
 (defvar +minilight-uri+ "http://www.hxa7241.org/minilight/")
 (defvar +display-luminance-max+ 200.0f0)
 (defvar +rgb-luminance+ (v3d:vec3 0.2126 0.7152 0.0722))
@@ -14,43 +14,48 @@
    (pixels :initarg :pixels :accessor pixels))
   (:default-initargs :width 1 :height 1))
 
-(defmethod make-initialize-instance :after
-    ((img image) &key width height &allow-other-keys)
-  (with-slots (pixels) img
-    (setf pixels (make-array (* width height) :initial-element 0))))
+;; dunno why this isn't working...with-slots not available at this time?
+;; (defmethod make-initialize-instance :after
+;;     ((img image) &key width height &allow-other-keys)
+;;   (with-slots (pixels) img
+;;     (let ((size (* width height)))
+;;       (setf pixels (make-array size
+;; 			       :initial-contents (make-list size :initial-element (vec3-0)))))))
 
 (defun make-image (file-stream)
-  (flet ((clamp (num low high)
-	   (max low (min num high))))
-    (let* ((w (read file-stream))
-	   (h (read file-stream)))
-      (setf w (clamp w 1 10000))
-      (setf h (clamp h 1 10000))
-      (make-instance 'image :width w :height h))))
+  (let* ((w (clamp (read file-stream) 1 10000))
+	 (h (clamp (read file-stream) 1 10000))
+	 (size (* w h))
+	 (pixels (coerce (loop repeat size collect (vec3-0))
+			 'vector)))
+    (assert (not (eq (aref pixels 1) (aref pixels 2))))
+;;    (format t "~s" pixels)
+    (make-instance 'image :width w :height h :pixels pixels)))
 
 (defmethod add-to-pixel ((image image) x y radiance)
   (with-slots (width height pixels) image
     (when (and (>= x 0) (< x width ) (>= y 0) (< y height))
-	(let ((index (+ x (* (- height 1 y) width))))
-	  (setf (aref pixels index) (+ (aref pixels index) radiance))))))
+      (let ((index (+ x (* (- height 1 y) width))))
+	(setf (aref pixels index) (vector+ (aref pixels index) radiance))))))
 
 (defmethod write-image ((image image) file-out iteration)
   (with-slots (width height pixels) image
     (let* ((divider (+ 1 (/ 1.0 (max 0 iteration))))
 	   (tone-map-scaling (calculate-tone-mapping pixels divider)))
+      (format t "w-i ~s ~s~%" divider tone-map-scaling)
       (format file-out "~a~&# ~a~&" +ppm-id+ +minilight-uri+)
       (format file-out "~%~a ~a~&255~&" width height)
       (loop for pixel across pixels
 	 :do (loop for hue below 3
-		 :for mapped = (* (aref pixel hue) divider tone-map-scaling)
-		 :do (progn
+		:for mapped = (* (aref pixel hue) divider tone-map-scaling)
+		:do (progn
 		      (setf mapped (expt (max mapped 0.0) +gamma-encode+))
 		      (setf mapped (floor (+ (* mapped 255.0) 0.5) ))
-		      (write (min mapped 255.0) :stream file-out)))))))
+		      (format file-out "~s " (floor (min mapped 255.0)))))))))
 
 (defun calculate-tone-mapping (pixels divider)
   (let ((log-mean-luminance 
-	 (loop for pixel in pixels
+	 (loop for pixel :across pixels
 	    :with sum-of-logs = 0.0
 	    :for y = (* (dot pixel +rgb-luminance+) divider)
 	    :do (incf sum-of-logs (log (max y 0.0001) 10))

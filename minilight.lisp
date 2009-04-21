@@ -74,6 +74,7 @@ with a newline. Eg.:
 ;;     (when (valid-minilight-file-p in)
 ;;       (flet (read-triangles )))))
 
+(defparameter *scene* nil)
 (defun main (file-name)
   (format t *banner-message*)
   (let* ((model-file-pathname file-name)
@@ -86,7 +87,8 @@ with a newline. Eg.:
 	       (return-from main))))
       ;; open model file and read
       (with-open-file (in-model model-file-pathname)
-	(with-open-file (out-image image-file-pathname :direction :output)
+	(with-open-file (out-image image-file-pathname :direction :output
+                                   :if-exists :supersede)
 	  (let ((format-id  (string-trim '(#\Newline #\Return #\Space #\Tab)
 					 (read-line in-model))))
 	    (if (not (string= *model-format-id* format-id))
@@ -95,6 +97,7 @@ with a newline. Eg.:
 		       (image       (make-image in-model))
 		       (camera      (make-camera in-model))
 		       (scene       (make-scene in-model camera)))
+                  (setf *scene* scene)
 		  ;; render loop
 		  (loop for frame-num from 1 to iterations
 		     with last-time = (get-universal-time)

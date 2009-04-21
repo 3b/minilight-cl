@@ -7,6 +7,8 @@
 ;;camera makes the raytracer
 (in-package #:minilight)
 
+
+(defparameter +pi-f+ (float pi 1f0))
 (defclass camera ()
   ((view-position :initarg :view-position :reader eye-point)
    (view-angle :initarg :view-angle)
@@ -23,16 +25,17 @@
 	   (up (vec3 0.0 1.0 0.0)))
       (when (vector-zerop vdir)
 	(setf vdir (vec3-0)))
-      (setf vang (float (* (min 160.0 (max 10.0 vang))
-                           (/ pi 180.0)) 1.0))
+      (setf vang (* (min 160.0 (max 10.0 vang))
+		    (/ +pi-f+ 180.0)))
       (let ((right (nnormalize (cross up vdir))))
-        (format t "up=~s vdir=~s r=~s~%" up vdir right)
-	(if (vector-zerop right)
+	(if (not (vector-zerop right))
+	    (setf up (nnormalize (cross vdir right)))
 	    (progn
 	      (setf up (vec3 0.0 0.0 (1/-1 (aref vdir 1))))
               (format t "up=~s vdir=~s r=~s~%" up vdir (nnormalize (cross up vdir)))
-	      (setf right (nnormalize (cross up vdir))))	    (setf up (nnormalize (cross vdir right)))
+	      (setf right (nnormalize (cross up vdir))))
 )
+        (format t "=up=~s vdir=~s r=~s~%pos=~s ang=~s~%" up vdir (nnormalize (cross up vdir)) vpos vang)
 	(make-instance 'camera
 		       :view-position vpos :view-angle vang
 		       :view-direction vdir :right right
@@ -45,31 +48,33 @@
 	       (view-ang view-angle)
 	       (view-pos view-position)
 	       up right) camera
-    (format t "~s ~s ~s ~s ~s" (type-of view-dir)  (type-of view-ang)  (type-of view-pos)  (type-of up)  (type-of right))
+    #+nil(format t "~s ~s ~s ~s ~s~%" (type-of view-dir)  (type-of view-ang)  (type-of view-pos)  (type-of up)  (type-of right))
     (with-slots (width height) image
       ;; make raytracer
       (let ((raytracer (make-raytracer scene))
 	    (aspect (/ height width)))
 	(loop :for y :from height :downto 0.0
-	   :do (loop :for x :from width :downto 0.0
-		  :for xf = (- (* (+ x (random 1.0))
-				  (/ 2.0 width))
-			       1.0)
+         :do (loop :for x :from width :downto 0.0
+              do (loop for r below 2
+                    :for xf = (- (* (+ x (random 1.0))
+                                    (/ 2.0 width))
+                                 1.0)
 		  
-		  :for yf = (- (* (+ y (random 1.0))
-				  (/ 2.0 height))
-			       1.0)
+                    :for yf = (- (* (+ y (random 1.0))
+                                    (/ 2.0 height))
+                                 1.0)
 		  
-		  :for offset = (vector+ (vector* right xf)
-					 (vector* up (* yf aspect)))
+                    :for offset = (vector+ (vector* right xf)
+                                           (vector* up (* yf aspect)))
 		  
-		  :for sample-direction = (nnormalize
-					   (vector+ view-dir
-						    (vector* offset
-							       (tan (* view-ang 0.5)))))
-		  :for ray = (apply #'make-slope-ray
-				    (concatenate 'list view-pos sample-direction))
+                    :for sample-direction = (nnormalize
+                                             (vector+ view-dir
+                                                      (vector* offset
+                                                               (tan (* view-ang 0.5)))))
+                    :for ray = (progn 
+                                 (apply #'make-slope-ray
+                                        (concatenate 'list view-pos sample-direction)))
 		  
-		  :for radiance = (radiance raytracer ray)
+                    :for radiance = (radiance raytracer ray)
 
-		  :do (add-to-pixel image x y radiance)))))))
+                    :do (add-to-pixel image x y radiance))))))))

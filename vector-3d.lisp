@@ -271,7 +271,7 @@ vector is int the form (x y z)."
  (declare (type vector3d seq1))
  (let ((len (abs (magnitude seq1))))
    (cond ((= len 1.0) seq1)
-	 ((zerop len) (vec3 0.0 0.0 0.0))
+	 ((zerop len) (vec3-0))
 	 (t (vector* seq1 (/ 1.0 len))))))
 
 (defun nnormalize (seq1)
@@ -279,7 +279,7 @@ vector is int the form (x y z)."
    (declare (type vector3d seq1))
    (let ((len (abs (magnitude seq1))))
      (cond ((= len 1.0) seq1)
-	   ((zerop len) (vec3 0.0 0.0 0.0))
+	   ((zerop len) (vec3-0))
 	   (t (nvector* seq1 (/ 1.0 len))))))
 
 (defun unit-normal-tri (seq1 seq2 seq3)

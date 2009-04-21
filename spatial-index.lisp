@@ -46,6 +46,7 @@
 (defparameter *max-levels* 44)
 (defparameter *max-items* 8)
 
+
 (defclass spatial-index ()
   ((bounds :initarg :bounds :accessor bounds)
    (nodes :initarg :nodes :accessor nodes)))
@@ -137,10 +138,22 @@ elements respectively."
 				  :bounds bounds
 				  :nodes  (coerce
 					  (loop for sub-bound in (subdivide bounds)
+                                                for (b o)
+                                                = (loop for tri across nodes
+                                                        if (bounded-by-p (bounds tri) sub-bound)
+                                                        collect tri into b
+                                                        else collect tri into o
+                                                        finally
+                                                        (return
+                                                          (list
+                                                           (coerce b 'vector)
+                                                           (coerce o 'vector))))
+                                                do (setf nodes o)
 					     collect
 					       (make-node sub-bound
-							  (find-bounded nodes sub-bound)
-							  (+ depth 1)))
+                                                          b (+ depth 1))
+                                                into children
+                                                finally (return (append children (coerce nodes 'list))))
 					  'vector))
 		   (make-instance 'spatial-index :bounds bounds :nodes nodes))))
       (make-node bounds nodes 0))))
@@ -165,10 +178,20 @@ elements respectively."
   ;; TODO: determine if a FIND-SUBCELL function is needed. For now, leave out.
   (with-slots (bounds nodes) index
     (let ((distance (intersect-p ray bounds)))
+      (when (and distance (not (zerop  distance)) (plusp (decf *foo*)))
+        (format t "i: ~s~%" distance))
       (when distance
 	(intersect-p ray nodes)))))
 
 
+(defparameter *foo* 10)
+(defparameter *foo2* 10)
 (defmethod intersect-p ((ray slope-ray) (nodes vector))
   ;; Test each node until a hit.
-  (some #'(lambda (node) (intersect-p ray node)) nodes))
+  (let ((l (loop for node across nodes
+                 for r = (multiple-value-list (intersect-p ray node))
+                 when (car r) collect r) ))
+    (when (and l (plusp (decf *foo2*)))
+      (format t "i: ~s~%" l))
+    (values-list (first (sort l #'<
+                              :key (lambda (a) (abs (second a))))))))

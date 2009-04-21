@@ -24,22 +24,22 @@
 		     :type v3d:vector3d)
    
    (ground-reflection :accessor ground-reflect
-		     :initarg :ground-reflect
-		     :type v3d:vector3d)))
+		      :initarg :ground-reflect
+		      :type v3d:vector3d)))
 
-(defmethod make-initialize-instance :after
+(defmethod initialize-instance :after
     ((scene scene) &key mesh &allow-other-keys)
   (with-slots (emitters spatial-index) scene
     (setf emitters
 	  (loop :for i :from 0
-	     :for tri :across mesh
-	     :while (< (length tmp) *max-emitters*)
-	     :when (and (not (vector-zerop (emitivity tri)))
-			(plusp (area tri)))
-	     :collect (let ((i-val i))
-			(lambda () (aref mesh i-val)))
-	     :into tmp
-	     :finally (return tmp)))))
+           :for tri :across mesh
+           :while (< (length tmp) *max-emitters*)
+           :when (and (not (vector-zerop (emitivity tri)))
+                      (plusp (area tri)))
+           :collect (let ((i-val i))
+                      (lambda () (aref mesh i-val)))
+           :into tmp
+           :finally (return (coerce tmp 'vector))))))
 
 (defun make-scene (in-stream eye-position)
   (let* ((sky-emission (read-vector in-stream))
@@ -49,6 +49,7 @@
 			       :until (null tri) :collect tri)
 			    'vector)))
     (make-instance 'scene
+                   :emitters nil
 		   :sky-emission (nvector-clamp sky-emission (vec3-0) sky-emission)
 		   :ground-reflect (vector* sky-emission (nvector-clamp ground-reflection
 									(vec3-0)
